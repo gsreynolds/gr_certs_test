@@ -28,8 +28,9 @@ verifier:
 platforms:
   - name: ubuntu-18.04
     lifecycle:
-      pre_converge:
-      - remote: sudo mkdir -p /tmp/kitchen/trusted_certs && sudo wget https://chef-success-customer-read-only.s3.eu-west-2.amazonaws.com/random/self-signed.badssl.com -O /tmp/kitchen/trusted_certs/selfsigned.crt
+      post_create:
+      - remote: mkdir -p /tmp/kitchen/trusted_certs && wget https://chef-success-customer-read-only.s3.eu-west-2.amazonaws.com/random/self-signed.badssl.com -O /tmp/kitchen/trusted_certs/selfsigned.crt
+      - remote: curl -L https://omnitruck.chef.io/install.sh | sudo bash
       - remote: cat /tmp/kitchen/trusted_certs/selfsigned.crt | sudo tee -a /opt/chef/embedded/ssl/certs/cacert.pem
     transport:
       ssh_key: <%= ENV["SSH_KEY"] %>
@@ -43,8 +44,10 @@ platforms:
     driver:
       image_urn: MicrosoftWindowsServer:WindowsServer:2016-Datacenter:latest
     lifecycle:
-      pre_converge:
+      post_create:
       - remote: powershell.exe -Command "Invoke-WebRequest -Uri https://chef-success-customer-read-only.s3.eu-west-2.amazonaws.com/random/self-signed.badssl.com -OutFile selfsigned.cer; Import-Certificate -FilePath selfsigned.cer -CertStoreLocation Cert:\LocalMachine\Root"
+      - remote: powershell.exe -Command ". { iwr -useb https://omnitruck.chef.io/install.ps1 } | iex; install"
+      - remote: powershell.exe -Command "New-Item -Path "c:\users\azure\appdata\local\temp\kitchen\trusted_certs" -ItemType Directory -Force"
       - remote: powershell.exe -Command "Copy-Item selfsigned.cer c:\users\azure\appdata\local\temp\kitchen\trusted_certs"
       - remote: powershell.exe -Command "Get-Content selfsigned.cer | Add-Content C:\opscode\chef\embedded\ssl\certs\cacert.pem"
 
@@ -55,7 +58,7 @@ platforms:
       elevated: true
     driver:
       image_urn: MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest
-  
+
 suites:
   - name: default
     policyfile: Policyfile.rb
