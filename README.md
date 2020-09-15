@@ -1,3 +1,3 @@
 # gr_certs_test
 
-TODO: Enter the cookbook description here.
+Test of adding root CA/self signed certs into Chef Client in Test Kitchen, for both Chef resources and plain Ruby
