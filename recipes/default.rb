@@ -6,14 +6,14 @@
 
 puts Chef::Config[:trusted_certs_dir]
 
-remote_file ::File.join(Chef::Config[:file_cache_path], "index.html") do
-  source "https://self-signed.badssl.com/index.html"
+remote_file ::File.join(Chef::Config[:file_cache_path], 'index.html') do
+  source 'https://self-signed.badssl.com/index.html'
 end
 
-require "open-uri"
+require 'open-uri'
 
-open("https://self-signed.badssl.com/index.html") do |image|
-  File.open("./index.html", "wb") do |file|
+open('https://self-signed.badssl.com/index.html') do |image|
+  File.open('./index.html', 'wb') do |file|
     puts image.read
     file.write(image.read)
   end
