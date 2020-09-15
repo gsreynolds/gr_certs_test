@@ -1,0 +1,65 @@
+---
+driver:
+  name: azurerm
+  vm_tags:
+    X-Contact: <%= ENV['USER'] %>
+    X-Application: "Test-Kitchen"
+    X-Customer: "Test-Kitchen"
+    X-Project: "Test-Kitchen"
+    X-TTL: "4"
+  subscription_id: <%= ENV["AZURE_SUBSCRIPTION_ID"] %>
+  location: 'North Europe'
+  machine_size: 'Standard_D2s_v3'
+
+provisioner:
+  name: chef_zero
+  max_retries: 10 # tweak in conjunction with wait_for_retry
+  wait_for_retry: 180 # tweak based on machine shutdown speed
+  product_name: chef
+  product_version: 16
+
+transport:
+  connection_retries: 10
+  connection_retry_sleep: 60
+
+verifier:
+  name: inspec
+
+platforms:
+  - name: ubuntu-18.04
+    lifecycle:
+      pre_converge:
+      - remote: sudo mkdir -p /tmp/kitchen/trusted_certs && sudo wget https://chef-success-customer-read-only.s3.eu-west-2.amazonaws.com/random/self-signed.badssl.com -O /tmp/kitchen/trusted_certs/selfsigned.crt
+      - remote: cat /tmp/kitchen/trusted_certs/selfsigned.crt | sudo tee -a /opt/chef/embedded/ssl/certs/cacert.pem
+    transport:
+      ssh_key: <%= ENV["SSH_KEY"] %>
+    driver:
+      image_urn: Canonical:UbuntuServer:18.04-LTS:latest
+
+  - name: windows-2016
+    transport:
+      name: winrm
+      elevated: true
+    driver:
+      image_urn: MicrosoftWindowsServer:WindowsServer:2016-Datacenter:latest
+    lifecycle:
+      pre_converge:
+      - remote: powershell.exe -Command "Invoke-WebRequest -Uri https://chef-success-customer-read-only.s3.eu-west-2.amazonaws.com/random/self-signed.badssl.com -OutFile selfsigned.cer; Import-Certificate -FilePath selfsigned.cer -CertStoreLocation Cert:\LocalMachine\Root"
+      - remote: powershell.exe -Command "Copy-Item selfsigned.cer c:\users\azure\appdata\local\temp\kitchen\trusted_certs"
+      - remote: powershell.exe -Command "Get-Content selfsigned.cer | Add-Content C:\opscode\chef\embedded\ssl\certs\cacert.pem"
+
+
+  - name: windows-2019
+    transport:
+      name: winrm
+      elevated: true
+    driver:
+      image_urn: MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest
+  
+suites:
+  - name: default
+    policyfile: Policyfile.rb
+    verifier:
+      inspec_tests:
+        - test/integration/default
+    attributes:
